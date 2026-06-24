@@ -40,8 +40,47 @@ const DEFAULT_LAYOUT: ThemeLayout = {
 
 export const defaultTheme: DashboardTheme = {
   name: "default",
+  label: "Modern Light",
+  description: "Bright dashboard surfaces with soft borders and line icons",
+  palette: {
+    background: { hex: "#f6f8fb", alpha: 1 },
+    midground: { hex: "#172033", alpha: 1 },
+    foreground: { hex: "#2563eb", alpha: 1 },
+    warmGlow: "rgba(37, 99, 235, 0.08)",
+    noiseOpacity: 0,
+  },
+  typography: DEFAULT_TYPOGRAPHY,
+  layout: {
+    radius: "0.5rem",
+    density: "comfortable",
+  },
+  colorOverrides: {
+    card: "#ffffff",
+    cardForeground: "#172033",
+    popover: "#ffffff",
+    popoverForeground: "#172033",
+    primary: "#2563eb",
+    primaryForeground: "#ffffff",
+    secondary: "#eef3f8",
+    secondaryForeground: "#172033",
+    muted: "#eef3f8",
+    mutedForeground: "#667085",
+    accent: "#e8f0ff",
+    accentForeground: "#1d4ed8",
+    destructive: "#dc2626",
+    destructiveForeground: "#ffffff",
+    success: "#16a34a",
+    warning: "#d97706",
+    border: "#d9e2ec",
+    input: "#cbd5e1",
+    ring: "#2563eb",
+  },
+};
+
+export const hermesTealTheme: DashboardTheme = {
+  name: "hermes-teal",
   label: "Hermes Teal",
-  description: "Classic dark teal — the canonical Hermes look",
+  description: "Classic dark teal — the previous canonical Hermes look",
   palette: {
     background: { hex: "#041c1c", alpha: 1 },
     midground: { hex: "#ffe6cb", alpha: 1 },
@@ -190,8 +229,8 @@ export const roseTheme: DashboardTheme = {
  */
 export const defaultLargeTheme: DashboardTheme = {
   name: "default-large",
-  label: "Hermes Teal (Large)",
-  description: "Hermes Teal with bigger fonts and roomier spacing",
+  label: "Modern Light (Large)",
+  description: "Modern Light with bigger fonts and roomier spacing",
   palette: defaultTheme.palette,
   typography: {
     ...DEFAULT_TYPOGRAPHY,
@@ -202,11 +241,13 @@ export const defaultLargeTheme: DashboardTheme = {
     ...DEFAULT_LAYOUT,
     density: "spacious",
   },
+  colorOverrides: defaultTheme.colorOverrides,
 };
 
 export const BUILTIN_THEMES: Record<string, DashboardTheme> = {
   default: defaultTheme,
   "default-large": defaultLargeTheme,
+  "hermes-teal": hermesTealTheme,
   midnight: midnightTheme,
   ember: emberTheme,
   mono: monoTheme,

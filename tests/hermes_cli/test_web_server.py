@@ -2105,7 +2105,7 @@ class TestPtyWebSocket:
         monkeypatch.setattr(
             self.ws_module,
             "_resolve_chat_argv",
-            lambda resume=None, sidecar_url=None: (["/bin/cat"], None, None),
+            lambda resume=None, sidecar_url=None, profile=None: (["/bin/cat"], None, None),
         )
         from starlette.websockets import WebSocketDisconnect
 
@@ -2118,7 +2118,7 @@ class TestPtyWebSocket:
         monkeypatch.setattr(
             self.ws_module,
             "_resolve_chat_argv",
-            lambda resume=None, sidecar_url=None: (["/bin/cat"], None, None),
+            lambda resume=None, sidecar_url=None, profile=None: (["/bin/cat"], None, None),
         )
         from starlette.websockets import WebSocketDisconnect
 
@@ -2131,7 +2131,7 @@ class TestPtyWebSocket:
         monkeypatch.setattr(
             self.ws_module,
             "_resolve_chat_argv",
-            lambda resume=None, sidecar_url=None: (
+            lambda resume=None, sidecar_url=None, profile=None: (
                 ["/bin/sh", "-c", "printf hermes-ws-ok"],
                 None,
                 None,
@@ -2161,7 +2161,7 @@ class TestPtyWebSocket:
         monkeypatch.setattr(
             self.ws_module,
             "_resolve_chat_argv",
-            lambda resume=None, sidecar_url=None: (["/bin/cat"], None, None),
+            lambda resume=None, sidecar_url=None, profile=None: (["/bin/cat"], None, None),
         )
         with self.client.websocket_connect(self._url()) as conn:
             conn.send_bytes(b"round-trip-payload\n")
@@ -2194,7 +2194,7 @@ class TestPtyWebSocket:
             self.ws_module,
             "_resolve_chat_argv",
             # sleep gives the test time to push the resize before the child reads the ioctl.
-            lambda resume=None, sidecar_url=None: (
+            lambda resume=None, sidecar_url=None, profile=None: (
                 [sys.executable, "-c", winsize_script],
                 None,
                 None,
@@ -2223,7 +2223,7 @@ class TestPtyWebSocket:
         monkeypatch.setattr(
             self.ws_module,
             "_resolve_chat_argv",
-            lambda resume=None, sidecar_url=None: (["/bin/cat"], None, None),
+            lambda resume=None, sidecar_url=None, profile=None: (["/bin/cat"], None, None),
         )
         # Patch PtyBridge.spawn at the web_server module's binding.
         import hermes_cli.web_server as ws_mod
@@ -2238,7 +2238,7 @@ class TestPtyWebSocket:
     def test_resume_parameter_is_forwarded_to_argv(self, monkeypatch):
         captured: dict = {}
 
-        def fake_resolve(resume=None, sidecar_url=None):
+        def fake_resolve(resume=None, sidecar_url=None, profile=None):
             captured["resume"] = resume
             return (["/bin/sh", "-c", "printf resume-arg-ok"], None, None)
 
@@ -2252,13 +2252,47 @@ class TestPtyWebSocket:
                 pass
         assert captured.get("resume") == "sess-42"
 
+    def test_profile_parameter_is_forwarded_to_argv(self, monkeypatch):
+        captured: dict = {}
+
+        def fake_resolve(resume=None, sidecar_url=None, profile=None):
+            captured["profile"] = profile
+            return (["/bin/sh", "-c", "printf profile-arg-ok"], None, None)
+
+        monkeypatch.setattr(self.ws_module, "_resolve_chat_argv", fake_resolve)
+
+        with self.client.websocket_connect(self._url(profile="nm-script-writer")) as conn:
+            try:
+                conn.receive_bytes()
+            except Exception:
+                pass
+        assert captured.get("profile") == "nm-script-writer"
+
+    def test_resolve_chat_argv_sets_profile_home(self, monkeypatch):
+        from hermes_constants import get_hermes_home
+        import hermes_cli.main as main_mod
+
+        profile_dir = get_hermes_home() / "profiles" / "nm-script-writer"
+        profile_dir.mkdir(parents=True)
+        monkeypatch.setattr(
+            main_mod,
+            "_make_tui_argv",
+            lambda _root, tui_dev=False: (["node", "entry.js"], "/tmp/hermes-tui"),
+        )
+
+        _argv, _cwd, env = self.ws_module._resolve_chat_argv(
+            profile="nm-script-writer",
+        )
+
+        assert env["HERMES_HOME"] == str(profile_dir)
+
     def test_channel_param_propagates_sidecar_url(self, monkeypatch):
         """When /api/pty is opened with ?channel=, the PTY child gets a
         HERMES_TUI_SIDECAR_URL env var pointing back at /api/pub on the
         same channel — which is how tool events reach the dashboard sidebar."""
         captured: dict = {}
 
-        def fake_resolve(resume=None, sidecar_url=None):
+        def fake_resolve(resume=None, sidecar_url=None, profile=None):
             captured["sidecar_url"] = sidecar_url
             return (["/bin/sh", "-c", "printf sidecar-ok"], None, None)
 

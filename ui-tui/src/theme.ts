@@ -256,11 +256,11 @@ const cleanPromptSymbol = (s: string | undefined, fallback: string) => {
 
 export const DARK_THEME: Theme = {
   color: {
-    primary: '#FFD700',
-    accent: '#FFBF00',
-    border: '#CD7F32',
-    text: '#FFF8DC',
-    muted: '#CC9B1F',
+    primary: '#7DD3C7',
+    accent: '#5FA8FF',
+    border: '#31535B',
+    text: '#E7F1F0',
+    muted: '#8EA8A8',
     // Bumped from the old `#B8860B` darkgoldenrod (~53% luminance) which
     // read as barely-visible on dark terminals for long body text.  The
     // new value sits ~60% luminance — readable without losing the "muted /
@@ -271,31 +271,31 @@ export const DARK_THEME: Theme = {
     completionMetaBg: '#1a1a2e',
     completionMetaCurrentBg: '#333355',
 
-    label: '#DAA520',
-    ok: '#4caf50',
-    error: '#ef5350',
-    warn: '#ffa726',
+    label: '#A7F3D0',
+    ok: '#34D399',
+    error: '#F87171',
+    warn: '#FBBF24',
 
-    prompt: '#FFF8DC',
+    prompt: '#7DD3C7',
     // sessionLabel/sessionBorder intentionally track the `dim` value — they
     // are "same role, same colour" by design.  fromSkin's banner_dim fallback
     // relies on this pairing (#11300).
-    sessionLabel: '#CC9B1F',
-    sessionBorder: '#CC9B1F',
+    sessionLabel: '#8EA8A8',
+    sessionBorder: '#5FA8FF',
 
-    statusBg: '#1a1a2e',
-    statusFg: '#C0C0C0',
-    statusGood: '#8FBC8F',
-    statusWarn: '#FFD700',
-    statusBad: '#FF8C00',
-    statusCritical: '#FF6B6B',
-    selectionBg: '#3a3a55',
+    statusBg: '#0B2426',
+    statusFg: '#9CB7B7',
+    statusGood: '#6EE7B7',
+    statusWarn: '#FBBF24',
+    statusBad: '#FB923C',
+    statusCritical: '#F87171',
+    selectionBg: '#1F4A52',
 
     diffAdded: 'rgb(220,255,220)',
     diffRemoved: 'rgb(255,220,220)',
     diffAddedWord: 'rgb(36,138,61)',
     diffRemovedWord: 'rgb(207,34,46)',
-    shellDollar: '#4dabf7'
+    shellDollar: '#93C5FD'
   },
 
   brand: BRAND,

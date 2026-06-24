@@ -302,14 +302,13 @@ export function StatusRule({
   return (
     <Box height={1}>
       <Box flexShrink={1} width={leftWidth}>
-        <Text color={t.color.border} wrap="truncate-end">
-          {'─ '}
+        <Text color={t.color.muted} dimColor wrap="truncate-end">
           {busy ? (
             <FaceTicker color={statusColor} startedAt={turnStartedAt} />
           ) : (
             <Text color={statusColor}>{status}</Text>
           )}
-          <Text color={t.color.muted}> │ {modelLabel(model, modelReasoningEffort, modelFast)}</Text>
+          <Text color={t.color.muted}>  ·  {modelLabel(model, modelReasoningEffort, modelFast)}</Text>
           {ctxLabel ? <Text color={t.color.muted}> │ {ctxLabel}</Text> : null}
           {bar ? (
             <Text color={t.color.muted}>
@@ -349,8 +348,8 @@ export function StatusRule({
         </Text>
       </Box>
 
-      <Text color={t.color.border}> ─ </Text>
-      <Text color={t.color.label}>{cwdLabel}</Text>
+      <Text color={t.color.muted} dimColor> · </Text>
+      <Text color={t.color.muted} dimColor>{cwdLabel}</Text>
     </Box>
   )
 }

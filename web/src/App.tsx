@@ -67,6 +67,8 @@ import ProfilesPage from "@/pages/ProfilesPage";
 import SkillsPage from "@/pages/SkillsPage";
 import PluginsPage from "@/pages/PluginsPage";
 import ChatPage from "@/pages/ChatPage";
+import WebChatPage from "@/pages/WebChatPage";
+import DocumentsPage from "@/pages/DocumentsPage";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { ThemeSwitcher } from "@/components/ThemeSwitcher";
 import { useI18n } from "@/i18n";
@@ -77,7 +79,7 @@ import { useTheme } from "@/themes";
 import { isDashboardEmbeddedChatEnabled } from "@/lib/dashboard-flags";
 
 function RootRedirect() {
-  return <Navigate to="/sessions" replace />;
+  return <Navigate to="/webchat" replace />;
 }
 
 function UnknownRouteFallback({ pluginsLoading }: { pluginsLoading: boolean }) {
@@ -90,9 +92,14 @@ function UnknownRouteFallback({ pluginsLoading }: { pluginsLoading: boolean }) {
 
 const CHAT_NAV_ITEM: NavItem = {
   path: "/chat",
-  labelKey: "chat",
-  label: "Chat",
+  label: "TUI",
   icon: Terminal,
+};
+
+const WEBCHAT_NAV_ITEM: NavItem = {
+  path: "/webchat",
+  label: "WebChat",
+  icon: MessageSquare,
 };
 
 /**
@@ -112,6 +119,7 @@ const BUILTIN_ROUTES_CORE: Record<string, ComponentType> = {
   "/logs": LogsPage,
   "/cron": CronPage,
   "/skills": SkillsPage,
+  "/documents": DocumentsPage,
   "/plugins": PluginsPage,
   "/profiles": ProfilesPage,
   "/config": ConfigPage,
@@ -124,6 +132,13 @@ const BUILTIN_ROUTES_CORE: Record<string, ComponentType> = {
 // element just claims the path so the `*` catch-all redirect doesn't
 // fire when the user navigates to /chat.
 function ChatRouteSink() {
+  return null;
+}
+
+// Route placeholder for /webchat.  The real WebChatPage is mounted
+// persistently below the route switch so switching dashboard tabs does not
+// wipe the active conversation.
+function WebChatRouteSink() {
   return null;
 }
 
@@ -149,6 +164,7 @@ const BUILTIN_NAV_REST: NavItem[] = [
   { path: "/logs", labelKey: "logs", label: "Logs", icon: FileText },
   { path: "/cron", labelKey: "cron", label: "Cron", icon: Clock },
   { path: "/skills", labelKey: "skills", label: "Skills", icon: Package },
+  { path: "/documents", label: "Documents", icon: FileText },
   { path: "/plugins", labelKey: "plugins", label: "Plugins", icon: Puzzle },
   { path: "/profiles", labelKey: "profiles", label: "Profiles", icon: Users },
   { path: "/config", labelKey: "config", label: "Config", icon: Settings },
@@ -314,6 +330,7 @@ export default function App() {
   const isDocsRoute = pathname === "/docs" || pathname === "/docs/";
   const normalizedPath = pathname.replace(/\/$/, "") || "/";
   const isChatRoute = normalizedPath === "/chat";
+  const isWebChatRoute = normalizedPath === "/webchat";
   const embeddedChat = isDashboardEmbeddedChatEnabled();
 
   // A plugin can replace the built-in /chat page via `tab.override: "/chat"`
@@ -341,6 +358,7 @@ export default function App() {
   const builtinRoutes = useMemo(
     () => ({
       ...BUILTIN_ROUTES_CORE,
+      "/webchat": WebChatRouteSink,
       ...(embeddedChat ? { "/chat": ChatRouteSink } : {}),
     }),
     [embeddedChat],
@@ -348,7 +366,9 @@ export default function App() {
 
   const builtinNav = useMemo(
     () =>
-      embeddedChat ? [CHAT_NAV_ITEM, ...BUILTIN_NAV_REST] : BUILTIN_NAV_REST,
+      embeddedChat
+        ? [WEBCHAT_NAV_ITEM, CHAT_NAV_ITEM, ...BUILTIN_NAV_REST]
+        : [WEBCHAT_NAV_ITEM, ...BUILTIN_NAV_REST],
     [embeddedChat],
   );
 
@@ -399,7 +419,7 @@ export default function App() {
   return (
     <div
       data-layout-variant={layoutVariant}
-      className="font-mondwest flex h-dvh max-h-dvh min-h-0 flex-col overflow-hidden bg-black uppercase text-midground antialiased"
+      className="flex h-dvh max-h-dvh min-h-0 flex-col overflow-hidden bg-[#f6f8fb] text-slate-900 antialiased normal-case"
     >
       <SelectionSwitcher />
       <Backdrop />
@@ -409,8 +429,8 @@ export default function App() {
         className={cn(
           "lg:hidden fixed top-0 left-0 right-0 z-40 h-12",
           "flex items-center gap-2 px-3",
-          "border-b border-current/20",
-          "bg-background-base/90 backdrop-blur-sm",
+          "border-b border-border",
+          "bg-white/95 backdrop-blur-sm shadow-sm",
         )}
         style={{
           background: "var(--component-header-background)",
@@ -425,14 +445,13 @@ export default function App() {
           aria-label={t.app.openNavigation}
           aria-expanded={mobileOpen}
           aria-controls="app-sidebar"
-          className="text-midground/70 hover:text-midground"
+          className="rounded-lg text-muted-foreground hover:bg-accent hover:text-accent-foreground"
         >
           <Menu />
         </Button>
 
         <Typography
-          className="font-bold text-[0.95rem] leading-[0.95] tracking-[0.05em] text-midground"
-          style={{ mixBlendMode: "plus-lighter" }}
+          className="text-sm font-semibold tracking-normal text-foreground"
         >
           {t.app.brand}
         </Typography>
@@ -445,7 +464,7 @@ export default function App() {
           onClick={closeMobile}
           className={cn(
             "lg:hidden fixed inset-0 z-40 p-0 block",
-            "bg-black/60 backdrop-blur-sm",
+            "bg-slate-950/35 backdrop-blur-sm",
           )}
         />
       )}
@@ -459,8 +478,8 @@ export default function App() {
             aria-label={t.app.navigation}
             className={cn(
               "fixed top-0 left-0 z-50 flex h-dvh max-h-dvh w-64 min-h-0 flex-col",
-              "border-r border-current/20",
-              "bg-background-base/95 backdrop-blur-sm",
+              "border-r border-border",
+              "bg-white/95 backdrop-blur-sm shadow-[1px_0_0_rgba(15,23,42,0.02)]",
               "transition-transform duration-200 ease-out",
               mobileOpen ? "translate-x-0" : "-translate-x-full",
               "lg:sticky lg:top-0 lg:translate-x-0 lg:shrink-0",
@@ -474,19 +493,16 @@ export default function App() {
             <div
               className={cn(
                 "flex h-14 shrink-0 items-center justify-between gap-2",
-                "border-b border-current/20",
+                "border-b border-border px-4",
               )}
             >
               <div className="flex items-center gap-2">
                 <PluginSlot name="header-left" />
 
                 <Typography
-                  className="font-bold text-[1.125rem] leading-[0.95] tracking-[0.0525rem] text-midground"
-                  style={{ mixBlendMode: "plus-lighter" }}
+                  className="text-base font-semibold leading-tight tracking-normal text-foreground"
                 >
-                  Hermes
-                  <br />
-                  Agent
+                  Hermes Agent
                 </Typography>
               </div>
 
@@ -495,14 +511,14 @@ export default function App() {
                 size="icon"
                 onClick={closeMobile}
                 aria-label={t.app.closeNavigation}
-                className="lg:hidden text-midground/70 hover:text-midground"
+                className="lg:hidden rounded-lg text-muted-foreground hover:bg-accent hover:text-accent-foreground"
               >
                 <X />
               </Button>
             </div>
 
             <nav
-              className="min-h-0 w-full flex-1 overflow-y-auto overflow-x-hidden border-t border-current/10 py-2"
+              className="min-h-0 w-full flex-1 overflow-y-auto overflow-x-hidden py-3"
               aria-label={t.app.navigation}
             >
               <ul className="flex flex-col">
@@ -519,13 +535,13 @@ export default function App() {
               {sidebarNav.pluginItems.length > 0 && (
                 <div
                   aria-labelledby="hermes-sidebar-plugin-nav-heading"
-                  className="flex flex-col border-t border-current/10 pb-2"
+                  className="mt-2 flex flex-col border-t border-border pb-2 pt-2"
                   role="group"
                 >
                   <span
                     className={cn(
-                      "px-5 pt-2.5 pb-1",
-                      "font-mondwest text-[0.6rem] tracking-[0.15em] uppercase opacity-30",
+                      "px-4 pt-2.5 pb-1",
+                      "text-[0.7rem] font-medium text-muted-foreground",
                     )}
                     id="hermes-sidebar-plugin-nav-heading"
                   >
@@ -552,7 +568,7 @@ export default function App() {
               className={cn(
                 "flex shrink-0 items-center justify-between gap-2",
                 "px-3 py-2",
-                "border-t border-current/20",
+                "border-t border-border",
               )}
             >
               <div className="flex min-w-0 items-center gap-2">
@@ -570,7 +586,7 @@ export default function App() {
               className={cn(
                 "relative z-2 flex min-w-0 min-h-0 flex-1 flex-col",
                 "px-3 sm:px-6",
-                isChatRoute
+                isChatRoute || isWebChatRoute
                   ? "pb-3 pt-1 sm:pb-4 sm:pt-2 lg:pt-4"
                   : "pt-2 sm:pt-4 lg:pt-6 pb-4 sm:pb-8",
                 isDocsRoute && "min-h-0 flex-1",
@@ -580,7 +596,7 @@ export default function App() {
               <div
                 className={cn(
                   "w-full min-w-0",
-                  (isDocsRoute || isChatRoute) &&
+                  (isDocsRoute || isChatRoute || isWebChatRoute) &&
                     "min-h-0 flex flex-1 flex-col",
                 )}
               >
@@ -595,6 +611,17 @@ export default function App() {
                     }
                   />
                 </Routes>
+
+                <div
+                  data-webchat-active={isWebChatRoute ? "true" : "false"}
+                  className={cn(
+                    "min-h-0 min-w-0",
+                    isWebChatRoute ? "flex flex-1 flex-col" : "hidden",
+                  )}
+                  aria-hidden={!isWebChatRoute}
+                >
+                  <WebChatPage />
+                </div>
 
                 {embeddedChat &&
                   !chatOverriddenByPlugin &&
@@ -650,17 +677,17 @@ function SidebarNavLink({ closeMobile, item, t }: SidebarNavLinkProps) {
         onClick={closeMobile}
         className={({ isActive }) =>
           cn(
-            "group relative flex items-center gap-3",
-            "px-5 py-2.5",
-            "font-mondwest text-[0.8rem] tracking-[0.12em]",
+            "group relative mx-2 flex items-center gap-3 rounded-lg",
+            "px-3 py-2.5",
+            "text-sm font-medium tracking-normal",
             "whitespace-nowrap transition-colors cursor-pointer",
-            "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-midground",
-            isActive ? "text-midground" : "opacity-60 hover:opacity-100",
+            "focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20",
+            isActive
+              ? "bg-accent text-accent-foreground"
+              : "text-muted-foreground hover:bg-muted hover:text-foreground",
           )
         }
-        style={{
-          clipPath: "var(--component-tab-clip-path)",
-        }}
+        style={{ clipPath: "var(--component-tab-clip-path)" }}
       >
         {({ isActive }) => (
           <>
@@ -669,14 +696,13 @@ function SidebarNavLink({ closeMobile, item, t }: SidebarNavLinkProps) {
 
             <span
               aria-hidden
-              className="absolute inset-y-0.5 left-1.5 right-1.5 bg-midground opacity-0 pointer-events-none transition-opacity duration-200 group-hover:opacity-5"
+              className="pointer-events-none absolute inset-0 rounded-lg bg-primary opacity-0 transition-opacity duration-200 group-hover:opacity-[0.03]"
             />
 
             {isActive && (
               <span
                 aria-hidden
-                className="absolute left-0 top-0 bottom-0 w-px bg-midground"
-                style={{ mixBlendMode: "plus-lighter" }}
+                className="absolute left-0 top-2 bottom-2 w-0.5 rounded-full bg-primary"
               />
             )}
           </>
@@ -720,14 +746,14 @@ function SidebarSystemActions({ onNavigate }: { onNavigate: () => void }) {
     <div
       className={cn(
         "shrink-0 flex flex-col",
-        "border-t border-current/10",
+        "border-t border-border",
         "py-1",
       )}
     >
       <span
         className={cn(
-          "px-5 pt-0.5 pb-0.5",
-          "font-mondwest text-[0.6rem] tracking-[0.15em] uppercase opacity-30",
+          "px-4 pt-2 pb-1",
+          "text-[0.7rem] font-medium text-muted-foreground",
         )}
       >
         {t.app.system}
@@ -752,12 +778,11 @@ function SidebarSystemActions({ onNavigate }: { onNavigate: () => void }) {
                 aria-busy={busy}
                 active={busy}
                 className={cn(
-                  "gap-3 px-5 py-1.5 whitespace-nowrap",
-                  "font-mondwest text-[0.75rem] tracking-[0.1em]",
-                  "transition-opacity",
+                  "mx-2 gap-3 rounded-lg px-3 py-2 whitespace-nowrap",
+                  "text-sm font-medium tracking-normal transition-colors",
                   busy
-                    ? "text-midground opacity-100"
-                    : "opacity-60 hover:opacity-100",
+                    ? "bg-accent text-accent-foreground"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground",
                   "disabled:opacity-30",
                 )}
               >
@@ -778,14 +803,13 @@ function SidebarSystemActions({ onNavigate }: { onNavigate: () => void }) {
 
                 <span
                   aria-hidden
-                  className="absolute inset-y-0.5 left-1.5 right-1.5 bg-midground opacity-0 pointer-events-none transition-opacity duration-200 group-hover:opacity-5"
+                  className="pointer-events-none absolute inset-0 rounded-lg bg-primary opacity-0 transition-opacity duration-200 group-hover:opacity-[0.03]"
                 />
 
                 {busy && (
                   <span
                     aria-hidden
-                    className="absolute left-0 top-0 bottom-0 w-px bg-midground"
-                    style={{ mixBlendMode: "plus-lighter" }}
+                    className="absolute left-0 top-2 bottom-2 w-0.5 rounded-full bg-primary"
                   />
                 )}
               </ListItem>

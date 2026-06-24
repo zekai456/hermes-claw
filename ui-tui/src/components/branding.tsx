@@ -2,7 +2,7 @@ import { Box, Text, useStdout } from '@hermes/ink'
 import { useEffect, useState } from 'react'
 import unicodeSpinners from 'unicode-animations'
 
-import { artWidth, caduceus, CADUCEUS_WIDTH, logo, LOGO_WIDTH } from '../banner.js'
+import { coworkerNameFromHome, profileLabelFromHome } from '../lib/coworkerBranding.js'
 import { flat } from '../lib/text.js'
 import type { Theme } from '../theme.js'
 import type { PanelSection, SessionInfo } from '../types.js'
@@ -40,20 +40,18 @@ export function ArtLines({ lines }: { lines: [string, string][] }) {
 }
 
 export function Banner({ t }: { t: Theme }) {
-  const cols = useStdout().stdout?.columns ?? 80
-  const logoLines = logo(t.color, t.bannerLogo || undefined)
+  const profileName = profileLabelFromHome(process.env.HERMES_HOME)
+  const coworkerName = coworkerNameFromHome(process.env.HERMES_HOME)
 
   return (
-    <Box flexDirection="column" marginBottom={1}>
-      {cols >= (t.bannerLogo ? artWidth(logoLines) : LOGO_WIDTH) ? (
-        <ArtLines lines={logoLines} />
-      ) : (
+    <Box flexDirection="column" marginBottom={1} paddingX={1}>
+      <Box justifyContent="space-between">
         <Text bold color={t.color.primary}>
-          {t.brand.icon} NOUS HERMES
+          {coworkerName === 'default' ? 'Hermes 工作台' : coworkerName}
         </Text>
-      )}
-
-      <Text color={t.color.muted}>{t.brand.icon} Nous Research · Messenger of the Digital Gods</Text>
+        <Text color={t.color.muted}>profile · {profileName}</Text>
+      </Box>
+      <Text color={t.color.muted}>新媒体团队 AI 同事 · 输入任务即可开始协作</Text>
     </Box>
   )
 }
@@ -98,10 +96,10 @@ const TOOLSETS_MAX = 8
 
 export function SessionPanel({ info, sid, t }: SessionPanelProps) {
   const cols = useStdout().stdout?.columns ?? 100
-  const heroLines = caduceus(t.color, t.bannerHero || undefined)
-  const leftW = Math.min((artWidth(heroLines) || CADUCEUS_WIDTH) + 4, Math.floor(cols * 0.4))
-  const wide = cols >= 90 && leftW + 40 < cols
-  const w = Math.max(20, wide ? cols - leftW - 14 : cols - 12)
+  const profileName = profileLabelFromHome(process.env.HERMES_HOME)
+  const coworkerName = coworkerNameFromHome(process.env.HERMES_HOME)
+  const wide = cols >= 86
+  const w = Math.max(20, cols - 8)
   const lineBudget = Math.max(12, w - 2)
   const strip = (s: string) => (s.endsWith('_tools') ? s.slice(0, -6) : s)
 
@@ -160,6 +158,15 @@ export function SessionPanel({ info, sid, t }: SessionPanelProps) {
   // ── Collapsible tools section ──
   const toolEntries = Object.entries(info.tools).sort()
   const toolsTotal = flat(info.tools).length
+  const primaryTools = Object.entries(info.tools)
+    .sort()
+    .flatMap(([k, vs]) => vs.slice(0, 3).map(v => `${strip(k)}:${v}`))
+    .slice(0, wide ? 8 : 5)
+  const starterPrompts = [
+    '生成本周选题和发布节奏',
+    '把素材改成短视频脚本',
+    '检查发布前风险和清单'
+  ]
 
   const toolsBody = () => {
     const shown = toolEntries.slice(0, TOOLSETS_MAX)
@@ -216,51 +223,64 @@ export function SessionPanel({ info, sid, t }: SessionPanelProps) {
   }
 
   return (
-    <Box borderColor={t.color.border} borderStyle="round" marginBottom={1} paddingX={2} paddingY={1}>
-      {wide && (
-        <Box flexDirection="column" marginRight={2} width={leftW}>
-          <ArtLines lines={heroLines} />
-          <Text />
-
-          <Text color={t.color.accent}>
-            {info.model.split('/').pop()}
-            <Text color={t.color.muted}> · Nous Research</Text>
-          </Text>
-
-          <Text color={t.color.muted} wrap="truncate-end">
-            {info.cwd || process.cwd()}
-          </Text>
-
-          {sid && (
-            <Text>
-              <Text color={t.color.sessionLabel}>Session: </Text>
-              <Text color={t.color.sessionBorder}>{sid}</Text>
-            </Text>
-          )}
-        </Box>
-      )}
-
+    <Box borderColor={t.color.border} borderStyle="round" flexDirection="column" marginBottom={1} paddingX={2} paddingY={1}>
       <Box flexDirection="column" width={w}>
-        <Box justifyContent="center" marginBottom={1}>
+        <Box justifyContent="space-between" marginBottom={1}>
           <Text bold color={t.color.primary}>
-            {t.brand.name}
-            {info.version ? ` v${info.version}` : ''}
-            {info.release_date ? ` (${info.release_date})` : ''}
+            {coworkerName === 'default' ? '欢迎使用 Hermes' : `你好，我是「${coworkerName}」`}
+          </Text>
+          <Text color={t.color.muted} wrap="truncate-end">
+            {info.model.split('/').pop()} · {profileName}
           </Text>
         </Box>
 
-        {/* ── Tools (expanded by default) ── */}
+        <Box flexDirection={wide ? 'row' : 'column'}>
+          <Box borderColor={t.color.border} borderStyle="round" flexDirection="column" marginRight={wide ? 1 : 0} paddingX={1} width={wide ? Math.floor(w * 0.34) : w}>
+            <Text bold color={t.color.label}>可用工具</Text>
+            {primaryTools.length > 0 ? primaryTools.map(tool => (
+              <Text color={t.color.muted} key={tool} wrap="truncate">
+                - {tool}
+              </Text>
+            )) : <InlineLoader label="scanning tools" t={t} />}
+            {toolsTotal > primaryTools.length ? (
+              <Text color={t.color.muted}>+ {toolsTotal - primaryTools.length} more</Text>
+            ) : null}
+          </Box>
+
+          <Box borderColor={t.color.border} borderStyle="round" flexDirection="column" marginRight={wide ? 1 : 0} marginTop={wide ? 0 : 1} paddingX={1} width={wide ? Math.floor(w * 0.34) : w}>
+            <Text bold color={t.color.label}>推荐任务</Text>
+            {starterPrompts.map(prompt => (
+              <Text color={t.color.text} key={prompt} wrap="truncate">
+                - {prompt}
+              </Text>
+            ))}
+          </Box>
+
+          <Box borderColor={t.color.border} borderStyle="round" flexDirection="column" marginTop={wide ? 0 : 1} paddingX={1} width={wide ? Math.max(20, w - Math.floor(w * 0.68) - 4) : w}>
+            <Text bold color={t.color.label}>最近会话</Text>
+            {sid ? (
+              <Text color={t.color.text} wrap="truncate">
+                当前 · {sid}
+              </Text>
+            ) : (
+              <Text color={t.color.muted}>暂无会话</Text>
+            )}
+            <Text color={t.color.muted} wrap="truncate">
+              /sessions 查看历史
+            </Text>
+          </Box>
+        </Box>
+
         <Box flexDirection="column" marginTop={1}>
           <CollapseToggle
             onToggle={() => setToolsOpen(v => !v)}
             open={toolsOpen}
             t={t}
-            title="Available Tools"
+            title="工具详情"
           />
           {toolsOpen && toolsBody()}
         </Box>
 
-        {/* ── Skills (collapsed by default) ── */}
         <Box flexDirection="column" marginTop={1}>
           <CollapseToggle
             count={skillsTotal}
@@ -268,12 +288,11 @@ export function SessionPanel({ info, sid, t }: SessionPanelProps) {
             open={skillsOpen}
             suffix={skillsCatCount > 0 ? `in ${skillsCatCount} categor${skillsCatCount === 1 ? 'y' : 'ies'}` : undefined}
             t={t}
-            title="Available Skills"
+            title="技能"
           />
           {skillsOpen && skillsBody()}
         </Box>
 
-        {/* ── System Prompt (collapsed by default) ── */}
         {sysPromptLen > 0 && (
           <Box flexDirection="column" marginTop={1}>
             <CollapseToggle
@@ -281,13 +300,12 @@ export function SessionPanel({ info, sid, t }: SessionPanelProps) {
               open={systemOpen}
               suffix={`— ${sysPromptLen.toLocaleString()} chars`}
               t={t}
-              title="System Prompt"
+              title="系统提示词"
             />
             {systemOpen && systemBody()}
           </Box>
         )}
 
-        {/* ── MCP Servers (collapsed by default) ── */}
         {info.mcp_servers && info.mcp_servers.length > 0 && (
           <Box flexDirection="column" marginTop={1}>
             <CollapseToggle
@@ -296,20 +314,18 @@ export function SessionPanel({ info, sid, t }: SessionPanelProps) {
               open={mcpOpen}
               suffix="connected"
               t={t}
-              title="MCP Servers"
+              title="MCP 服务"
             />
             {mcpOpen && mcpBody()}
           </Box>
         )}
 
-        <Text />
-
-        <Text color={t.color.text}>
+        <Text color={t.color.muted}>
           {toolsTotal} tools{' · '}
           {skillsTotal} skills
           {info.mcp_servers?.length ? ` · ${info.mcp_servers.length} MCP` : ''}
           {' · '}
-          <Text color={t.color.muted}>/help for commands</Text>
+          /help 查看命令
         </Text>
 
         {typeof info.update_behind === 'number' && info.update_behind > 0 && (

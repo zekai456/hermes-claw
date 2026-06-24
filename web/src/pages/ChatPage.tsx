@@ -39,11 +39,13 @@ import { PluginSlot } from "@/plugins";
 function buildWsUrl(
   token: string,
   resume: string | null,
+  profile: string | null,
   channel: string,
 ): string {
   const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
   const qs = new URLSearchParams({ token, channel });
   if (resume) qs.set("resume", resume);
+  if (profile) qs.set("profile", profile);
   return `${proto}//${window.location.host}/api/pty?${qs.toString()}`;
 }
 
@@ -155,7 +157,8 @@ export default function ChatPage({ isActive = true }: { isActive?: boolean }) {
   // treat the current resume target as part of the PTY identity and rebuild the
   // terminal session when it changes.
   const resumeParam = searchParams.get("resume");
-  const channel = useMemo(() => generateChannelId(), [resumeParam]);
+  const profileParam = searchParams.get("profile");
+  const channel = useMemo(() => generateChannelId(), [resumeParam, profileParam]);
 
   useEffect(() => {
     if (!resumeParam) return;
@@ -552,7 +555,7 @@ export default function ChatPage({ isActive = true }: { isActive?: boolean }) {
     });
 
     // WebSocket
-    const url = buildWsUrl(token, resumeParam, channel);
+    const url = buildWsUrl(token, resumeParam, profileParam, channel);
     const ws = new WebSocket(url);
     ws.binaryType = "arraybuffer";
     wsRef.current = ws;
@@ -657,7 +660,7 @@ export default function ChatPage({ isActive = true }: { isActive?: boolean }) {
         copyResetRef.current = null;
       }
     };
-  }, [channel, resumeParam]);
+  }, [channel, resumeParam, profileParam]);
 
   // When the user returns to the chat tab (isActive: false → true), the
   // terminal host just transitioned from display:none to display:flex.

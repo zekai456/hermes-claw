@@ -22,6 +22,7 @@ import threading
 import time
 import urllib.parse
 import urllib.request
+import base64
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -50,7 +51,7 @@ from hermes_cli.config import (
 from gateway.status import get_running_pid, read_runtime_status
 
 try:
-    from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
+    from fastapi import FastAPI, File, HTTPException, Request, UploadFile, WebSocket, WebSocketDisconnect
     from fastapi.middleware.cors import CORSMiddleware
     from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
     from fastapi.staticfiles import StaticFiles
@@ -283,7 +284,7 @@ _SCHEMA_OVERRIDES: Dict[str, Dict[str, Any]] = {
     "dashboard.theme": {
         "type": "select",
         "description": "Web dashboard visual theme",
-        "options": ["default", "midnight", "ember", "mono", "cyberpunk", "rose"],
+        "options": ["default", "default-large", "hermes-teal", "midnight", "ember", "mono", "cyberpunk", "rose"],
     },
     "display.resume_display": {
         "type": "select",
@@ -431,6 +432,190 @@ CONFIG_SCHEMA = _ordered_schema
 
 class ConfigUpdate(BaseModel):
     config: dict
+
+
+class DocumentCreate(BaseModel):
+    name: str
+    content: str
+
+
+def _documents_dir() -> Path:
+    path = Path(get_hermes_home()) / "documents" / "library"
+    path.mkdir(parents=True, exist_ok=True)
+    return path
+
+
+def _document_files_dir() -> Path:
+    path = _documents_dir() / "files"
+    path.mkdir(parents=True, exist_ok=True)
+    return path
+
+
+def _safe_document_id(name: str) -> str:
+    raw = Path(name.strip() or "untitled").name
+    stem = raw.rsplit(".", 1)[0] if "." in raw else raw
+    safe = "".join(ch.lower() if ch.isalnum() else "-" for ch in stem)
+    safe = "-".join(part for part in safe.split("-") if part)
+    return (safe or "untitled")[:80]
+
+
+def _safe_extension(filename: str) -> str:
+    suffix = Path(filename).suffix.lower()
+    if not suffix or len(suffix) > 12:
+        return ".bin"
+    return "".join(ch for ch in suffix if ch.isalnum() or ch == ".") or ".bin"
+
+
+_DOCUMENT_FILE_EXTENSIONS = {
+    ".md", ".markdown", ".txt", ".csv", ".json", ".yaml", ".yml",
+    ".pdf", ".doc", ".docx", ".ppt", ".pptx", ".xls", ".xlsx",
+    ".png", ".jpg", ".jpeg", ".webp", ".gif",
+}
+
+_DOCUMENT_TEXT_EXTENSIONS = {
+    ".md", ".markdown", ".txt", ".csv", ".json", ".yaml", ".yml",
+    ".html", ".css", ".js", ".ts",
+}
+
+_LOCAL_DOC_PREFIX = "local-"
+
+
+def _encode_local_document_id(path: Path) -> str:
+    raw = str(path.resolve(strict=False)).encode("utf-8")
+    return _LOCAL_DOC_PREFIX + base64.urlsafe_b64encode(raw).decode("ascii").rstrip("=")
+
+
+def _decode_local_document_id(document_id: str) -> Path:
+    if not document_id.startswith(_LOCAL_DOC_PREFIX):
+        raise ValueError("not a local document id")
+    payload = document_id[len(_LOCAL_DOC_PREFIX):]
+    padded = payload + "=" * (-len(payload) % 4)
+    try:
+        return Path(base64.urlsafe_b64decode(padded.encode("ascii")).decode("utf-8")).resolve(strict=False)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail="Invalid local document id") from exc
+
+
+def _document_path(document_id: str) -> Path:
+    safe = _safe_document_id(document_id)
+    path = (_documents_dir() / f"{safe}.md").resolve(strict=False)
+    base = _documents_dir().resolve(strict=False)
+    if base not in path.parents and path != base:
+        raise HTTPException(status_code=400, detail="Invalid document id")
+    return path
+
+
+def _is_text_path(path: Path) -> bool:
+    return path.suffix.lower() in _DOCUMENT_TEXT_EXTENSIONS
+
+
+def _document_info(path: Path) -> Dict[str, Any]:
+    text = path.read_text(encoding="utf-8", errors="replace")
+    stat = path.stat()
+    first_line = next((line.strip() for line in text.splitlines() if line.strip()), "")
+    title = first_line.lstrip("# ").strip() or path.stem.replace("-", " ")
+    preview = " ".join(text.strip().split())[:220]
+    return {
+        "id": path.stem,
+        "name": title,
+        "filename": path.name,
+        "size": stat.st_size,
+        "updated_at": stat.st_mtime,
+        "preview": preview,
+        "source": "library",
+    }
+
+
+def _local_document_info(path: Path) -> Dict[str, Any]:
+    stat = path.stat()
+    preview = ""
+    if _is_text_path(path) and stat.st_size <= 500_000:
+        preview = " ".join(path.read_text(encoding="utf-8", errors="replace").strip().split())[:220]
+    elif path.suffix.lower() in {".png", ".jpg", ".jpeg", ".webp", ".gif"}:
+        preview = f"图片文件：{path}"
+    else:
+        preview = f"本地附件：{path}"
+    return {
+        "id": _encode_local_document_id(path),
+        "name": path.stem,
+        "filename": path.name,
+        "size": stat.st_size,
+        "updated_at": stat.st_mtime,
+        "preview": preview,
+        "source": "local",
+        "path": str(path),
+    }
+
+
+def _candidate_output_dirs() -> list[Path]:
+    roots: list[Path] = []
+    home = get_hermes_home()
+    roots.extend([
+        home / "outputs",
+        home / "artifacts",
+        home / "reports",
+        home / "generated",
+        _document_files_dir(),
+    ])
+
+    cfg = load_config()
+    cwd_raw = (
+        os.getenv("TERMINAL_CWD")
+        or cfg_get(cfg, "terminal.cwd")
+        or os.getcwd()
+    )
+    try:
+        cwd = Path(str(cwd_raw)).expanduser()
+        roots.extend([
+            cwd / "outputs",
+            cwd / "output",
+            cwd / "artifacts",
+            cwd / "reports",
+            cwd / "generated",
+            cwd / "exports",
+            cwd / "documents",
+        ])
+    except Exception:
+        pass
+
+    seen: set[str] = set()
+    result: list[Path] = []
+    for root in roots:
+        resolved = root.resolve(strict=False)
+        key = str(resolved)
+        if key not in seen and resolved.exists() and resolved.is_dir():
+            seen.add(key)
+            result.append(resolved)
+    return result
+
+
+def _iter_local_output_files(limit: int = 300) -> list[Path]:
+    files: list[Path] = []
+    for root in _candidate_output_dirs():
+        try:
+            for path in root.rglob("*"):
+                if not path.is_file():
+                    continue
+                if path.suffix.lower() not in _DOCUMENT_FILE_EXTENSIONS:
+                    continue
+                # Library .md sidecars are already listed as normal documents.
+                if path.parent == _documents_dir() and path.suffix.lower() == ".md":
+                    continue
+                files.append(path)
+        except OSError:
+            continue
+    files.sort(key=lambda p: p.stat().st_mtime, reverse=True)
+    return files[:limit]
+
+
+def _is_text_upload(filename: str, content_type: str | None) -> bool:
+    suffix = Path(filename).suffix.lower()
+    if suffix in _DOCUMENT_TEXT_EXTENSIONS:
+        return True
+    return bool(content_type and (content_type.startswith("text/") or content_type in {
+        "application/json",
+        "application/x-yaml",
+    }))
 
 
 class EnvVarUpdate(BaseModel):
@@ -762,22 +947,70 @@ async def get_action_status(name: str, lines: int = 200):
 async def get_sessions(limit: int = 20, offset: int = 0):
     try:
         from hermes_state import SessionDB
-        db = SessionDB()
-        try:
-            sessions = db.list_sessions_rich(limit=limit, offset=offset)
-            total = db.session_count()
-            now = time.time()
-            for s in sessions:
+        now = time.time()
+        merged: list[dict[str, Any]] = []
+
+        # WebChat can launch conversations under the default Hermes home or
+        # under a coworker profile. Surface all of them in one dashboard list.
+        fetch_limit = max(limit + offset, limit, 20)
+        for db_path, profile_name in _session_db_candidates():
+            db = SessionDB(db_path=db_path)
+            try:
+                rows = db.list_sessions_rich(
+                    limit=fetch_limit,
+                    offset=0,
+                    order_by_last_active=True,
+                )
+            finally:
+                db.close()
+            for s in rows:
+                s["profile_name"] = profile_name
                 s["is_active"] = (
                     s.get("ended_at") is None
                     and (now - s.get("last_active", s.get("started_at", 0))) < 300
                 )
-            return {"sessions": sessions, "total": total, "limit": limit, "offset": offset}
-        finally:
-            db.close()
+                merged.append(s)
+
+        merged.sort(
+            key=lambda s: (
+                float(s.get("last_active") or s.get("started_at") or 0),
+                float(s.get("started_at") or 0),
+            ),
+            reverse=True,
+        )
+        total = len(merged)
+        sessions = merged[offset: offset + limit]
+        return {"sessions": sessions, "total": total, "limit": limit, "offset": offset}
     except Exception:
         _log.exception("GET /api/sessions failed")
         raise HTTPException(status_code=500, detail="Internal server error")
+
+
+def _session_db_candidates() -> list[tuple[Path, Optional[str]]]:
+    home = get_hermes_home()
+    candidates: list[tuple[Path, Optional[str]]] = [(home / "state.db", None)]
+    profiles_root = home / "profiles"
+    if profiles_root.is_dir():
+        for entry in sorted(profiles_root.iterdir()):
+            if entry.is_dir():
+                candidates.append((entry / "state.db", entry.name))
+    return [(path, profile) for path, profile in candidates if path.exists()]
+
+
+def _open_session_db_for(session_id: str):
+    from hermes_state import SessionDB
+
+    for db_path, profile_name in _session_db_candidates():
+        db = SessionDB(db_path=db_path)
+        try:
+            sid = db.resolve_session_id(session_id)
+            if sid and db.get_session(sid):
+                return db, sid, profile_name
+        except Exception:
+            db.close()
+            continue
+        db.close()
+    return None, None, None
 
 
 @app.get("/api/sessions/search")
@@ -860,6 +1093,142 @@ async def get_defaults():
 @app.get("/api/config/schema")
 async def get_schema():
     return {"fields": CONFIG_SCHEMA, "category_order": _CATEGORY_ORDER}
+
+
+@app.get("/api/documents")
+async def list_documents():
+    docs = []
+    for path in sorted(
+        _documents_dir().glob("*.md"),
+        key=lambda p: p.stat().st_mtime,
+        reverse=True,
+    ):
+        if path.is_file():
+            docs.append(_document_info(path))
+    existing_ids = {doc["id"] for doc in docs}
+    for path in _iter_local_output_files():
+        info = _local_document_info(path)
+        if info["id"] not in existing_ids:
+            docs.append(info)
+            existing_ids.add(info["id"])
+    docs.sort(key=lambda doc: float(doc.get("updated_at") or 0), reverse=True)
+    return {"documents": docs}
+
+
+@app.post("/api/documents")
+async def create_document(body: DocumentCreate):
+    content = body.content or ""
+    if len(content.encode("utf-8")) > 2_000_000:
+        raise HTTPException(status_code=413, detail="Document is too large")
+
+    base_id = _safe_document_id(body.name)
+    path = _document_path(base_id)
+    if path.exists():
+        path = _document_path(f"{base_id}-{int(time.time())}")
+
+    text = content.replace("\r\n", "\n").replace("\r", "\n")
+    if not text.strip():
+        raise HTTPException(status_code=400, detail="Document content is empty")
+    path.write_text(text, encoding="utf-8")
+    return _document_info(path)
+
+
+@app.post("/api/documents/upload")
+async def upload_document(file: UploadFile = File(...)):
+    filename = Path(file.filename or "untitled").name
+    data = await file.read()
+    if len(data) > 25_000_000:
+        raise HTTPException(status_code=413, detail="File is too large")
+    if not data:
+        raise HTTPException(status_code=400, detail="File is empty")
+
+    base_id = _safe_document_id(filename)
+    if _is_text_upload(filename, file.content_type):
+        try:
+            text = data.decode("utf-8")
+        except UnicodeDecodeError:
+            text = data.decode("utf-8", errors="replace")
+        path = _document_path(base_id)
+        if path.exists():
+            path = _document_path(f"{base_id}-{int(time.time())}")
+        path.write_text(text.replace("\r\n", "\n").replace("\r", "\n"), encoding="utf-8")
+        return _document_info(path)
+
+    ext = _safe_extension(filename)
+    stored_name = f"{base_id}-{int(time.time())}{ext}"
+    file_path = (_document_files_dir() / stored_name).resolve(strict=False)
+    file_path.write_bytes(data)
+
+    title = Path(filename).stem or base_id
+    content_type = file.content_type or "application/octet-stream"
+    if content_type.startswith("image/"):
+        body = (
+            f"# {title}\n\n"
+            f"类型：图片\n"
+            f"原始文件：{filename}\n"
+            f"本地路径：{file_path}\n\n"
+            f"请在需要时使用视觉/文件工具读取这张图片。"
+        )
+    else:
+        body = (
+            f"# {title}\n\n"
+            f"类型：附件\n"
+            f"原始文件：{filename}\n"
+            f"MIME：{content_type}\n"
+            f"本地路径：{file_path}\n\n"
+            f"请在需要时使用文件工具读取或解析这个附件。"
+        )
+
+    doc_path = _document_path(base_id)
+    if doc_path.exists():
+        doc_path = _document_path(f"{base_id}-{int(time.time())}")
+    doc_path.write_text(body, encoding="utf-8")
+    return _document_info(doc_path)
+
+
+@app.get("/api/documents/{document_id}")
+async def get_document(document_id: str):
+    if document_id.startswith(_LOCAL_DOC_PREFIX):
+        path = _decode_local_document_id(document_id)
+        if not path.exists() or not path.is_file():
+            raise HTTPException(status_code=404, detail="Document not found")
+        info = _local_document_info(path)
+        if _is_text_path(path) and path.stat().st_size <= 2_000_000:
+            content = path.read_text(encoding="utf-8", errors="replace")
+        elif path.suffix.lower() in {".png", ".jpg", ".jpeg", ".webp", ".gif"}:
+            content = (
+                f"# {path.stem}\n\n"
+                f"类型：图片\n"
+                f"本地路径：{path}\n\n"
+                f"请在需要时使用视觉/文件工具读取这张图片。"
+            )
+        else:
+            content = (
+                f"# {path.stem}\n\n"
+                f"类型：附件\n"
+                f"本地路径：{path}\n\n"
+                f"请在需要时使用文件工具读取或解析这个附件。"
+            )
+        return {**info, "content": content}
+
+    path = _document_path(document_id)
+    if not path.exists() or not path.is_file():
+        raise HTTPException(status_code=404, detail="Document not found")
+    return {
+        **_document_info(path),
+        "content": path.read_text(encoding="utf-8", errors="replace"),
+    }
+
+
+@app.delete("/api/documents/{document_id}")
+async def delete_document(document_id: str):
+    if document_id.startswith(_LOCAL_DOC_PREFIX):
+        raise HTTPException(status_code=400, detail="Local output files cannot be deleted from Documents")
+    path = _document_path(document_id)
+    if not path.exists() or not path.is_file():
+        raise HTTPException(status_code=404, detail="Document not found")
+    path.unlink()
+    return {"ok": True}
 
 
 _EMPTY_MODEL_INFO: dict = {
@@ -2418,16 +2787,16 @@ def _session_latest_descendant(session_id: str):
 
 @app.get("/api/sessions/{session_id}")
 async def get_session_detail(session_id: str):
-    from hermes_state import SessionDB
-    db = SessionDB()
+    db, sid, profile_name = _open_session_db_for(session_id)
     try:
-        sid = db.resolve_session_id(session_id)
-        session = db.get_session(sid) if sid else None
+        session = db.get_session(sid) if db and sid else None
         if not session:
             raise HTTPException(status_code=404, detail="Session not found")
+        session["profile_name"] = profile_name
         return session
     finally:
-        db.close()
+        if db:
+            db.close()
 
 
 
@@ -2445,16 +2814,15 @@ async def get_session_latest_descendant(session_id: str):
 
 @app.get("/api/sessions/{session_id}/messages")
 async def get_session_messages(session_id: str):
-    from hermes_state import SessionDB
-    db = SessionDB()
+    db, sid, profile_name = _open_session_db_for(session_id)
     try:
-        sid = db.resolve_session_id(session_id)
-        if not sid:
+        if not db or not sid:
             raise HTTPException(status_code=404, detail="Session not found")
         messages = db.get_messages(sid)
-        return {"session_id": sid, "messages": messages}
+        return {"session_id": sid, "profile_name": profile_name, "messages": messages}
     finally:
-        db.close()
+        if db:
+            db.close()
 
 
 @app.delete("/api/sessions/{session_id}")
@@ -3197,6 +3565,7 @@ _event_lock = asyncio.Lock()
 def _resolve_chat_argv(
     resume: Optional[str] = None,
     sidecar_url: Optional[str] = None,
+    profile: Optional[str] = None,
 ) -> tuple[list[str], Optional[str], Optional[dict]]:
     """Resolve the argv + cwd + env for the chat PTY.
 
@@ -3231,6 +3600,11 @@ def _resolve_chat_argv(
         if latest_resume:
             resume = latest_resume
         env["HERMES_TUI_RESUME"] = resume
+
+    if profile:
+        from hermes_cli.profiles import resolve_profile_env
+
+        env["HERMES_HOME"] = resolve_profile_env(profile)
 
     if sidecar_url:
         env["HERMES_TUI_SIDECAR_URL"] = sidecar_url
@@ -3306,11 +3680,16 @@ async def pty_ws(ws: WebSocket) -> None:
 
     # --- spawn PTY ------------------------------------------------------
     resume = ws.query_params.get("resume") or None
+    profile = ws.query_params.get("profile") or None
     channel = _channel_or_close_code(ws)
     sidecar_url = _build_sidecar_url(channel) if channel else None
 
     try:
-        argv, cwd, env = _resolve_chat_argv(resume=resume, sidecar_url=sidecar_url)
+        argv, cwd, env = _resolve_chat_argv(
+            resume=resume,
+            sidecar_url=sidecar_url,
+            profile=profile,
+        )
     except SystemExit as exc:
         # _make_tui_argv calls sys.exit(1) when node/npm is missing.
         await ws.send_text(f"\r\n\x1b[31mChat unavailable: {exc}\x1b[0m\r\n")
@@ -3622,8 +4001,9 @@ def mount_spa(application: FastAPI):
 # Built-in dashboard themes — label + description only.  The actual color
 # definitions live in the frontend (web/src/themes/presets.ts).
 _BUILTIN_DASHBOARD_THEMES = [
-    {"name": "default",       "label": "Hermes Teal",         "description": "Classic dark teal — the canonical Hermes look"},
-    {"name": "default-large", "label": "Hermes Teal (Large)", "description": "Hermes Teal with bigger fonts and roomier spacing"},
+    {"name": "default",       "label": "Modern Light",        "description": "Bright dashboard surfaces with soft borders and line icons"},
+    {"name": "default-large", "label": "Modern Light (Large)", "description": "Modern Light with bigger fonts and roomier spacing"},
+    {"name": "hermes-teal",   "label": "Hermes Teal",         "description": "Classic dark teal — the previous canonical Hermes look"},
     {"name": "midnight",      "label": "Midnight",            "description": "Deep blue-violet with cool accents"},
     {"name": "ember",     "label": "Ember",          "description": "Warm crimson and bronze — forge vibes"},
     {"name": "mono",      "label": "Mono",           "description": "Clean grayscale — minimal and focused"},

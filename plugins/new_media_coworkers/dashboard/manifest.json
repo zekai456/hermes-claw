@@ -1,0 +1,14 @@
+{
+  "name": "new-media-coworkers",
+  "label": "AI 同事",
+  "description": "面向新媒体团队的 Moxt-like AI 同事库。",
+  "icon": "Users",
+  "version": "0.1.0",
+  "tab": {
+    "path": "/coworkers",
+    "position": "after:profiles"
+  },
+  "entry": "dist/index.js",
+  "css": "dist/style.css",
+  "api": "plugin_api.py"
+}

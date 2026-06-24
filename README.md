@@ -2,17 +2,44 @@
   <img src="assets/banner.png" alt="Hermes Agent" width="100%">
 </p>
 
-# Hermes Agent ☤
+# Hermes Claw ☤
+
+> **Hermes Claw** is a new-media-team workbench built on top of Hermes Agent.
+> It keeps the upstream agent core intact while adding a modern light dashboard,
+> browser-native WebChat, reusable AI coworker profiles, a team document library,
+> and editorial workflows for research, scripts, repurposing, publishing, and
+> competitor monitoring.
 
 <p align="center">
   <a href="https://hermes-agent.nousresearch.com/docs/"><img src="https://img.shields.io/badge/Docs-hermes--agent.nousresearch.com-FFD700?style=for-the-badge" alt="Documentation"></a>
   <a href="https://discord.gg/NousResearch"><img src="https://img.shields.io/badge/Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Discord"></a>
-  <a href="https://github.com/NousResearch/hermes-agent/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="License: MIT"></a>
+  <a href="https://github.com/zekai456/hermes-claw/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="License: MIT"></a>
   <a href="https://nousresearch.com"><img src="https://img.shields.io/badge/Built%20by-Nous%20Research-blueviolet?style=for-the-badge" alt="Built by Nous Research"></a>
   <a href="README.zh-CN.md"><img src="https://img.shields.io/badge/Lang-中文-red?style=for-the-badge" alt="中文"></a>
 </p>
 
-**The self-improving AI agent built by [Nous Research](https://nousresearch.com).** It's the only agent with a built-in learning loop — it creates skills from experience, improves them during use, nudges itself to persist knowledge, searches its own past conversations, and builds a deepening model of who you are across sessions. Run it on a $5 VPS, a GPU cluster, or serverless infrastructure that costs nearly nothing when idle. It's not tied to your laptop — talk to it from Telegram while it works on a cloud VM.
+**Hermes Claw is a practical AI operating desk for content and new media teams.**
+It packages the self-improving Hermes Agent core with a product layer for
+day-to-day editorial work: AI coworkers, WebChat, document grounding, dashboard
+plugins, and workflow skills that turn research and raw materials into publishable
+plans, scripts, copy, checklists, reports, and PPT-ready outlines.
+
+## What's New In This Fork
+
+<table>
+<tr><td><b>Modern dashboard redesign</b></td><td>Default dashboard theme is now a clean light admin UI with calmer cards, inputs, sidebar navigation, dialogs, theme switcher, and language switcher. The legacy Hermes teal theme remains available.</td></tr>
+<tr><td><b>Browser-native WebChat</b></td><td>A new <code>/webchat</code> route provides a chat-first workspace for new media production, with persistent sessions, streaming assistant output, tool activity, slash commands, and quick switching between AI coworkers.</td></tr>
+<tr><td><b>AI coworker profiles</b></td><td>The <code>new-media-coworkers</code> dashboard plugin ships presets for operators, script writers, trend researchers, competitor watchers, brand editors, visual directors, PPT producers, crawler researchers, and custom coworkers.</td></tr>
+<tr><td><b>Team document library</b></td><td>A new <code>/documents</code> page and protected document API support saving, uploading, searching, viewing, attaching, and grounding chat answers in team materials and local generated reports.</td></tr>
+<tr><td><b>New media workflow skills</b></td><td>Built-in skills cover topic discovery, short-video scripts, multi-platform rewriting, publishing checklists, performance review, web source collection, and structured editorial evidence packs.</td></tr>
+<tr><td><b>Dashboard plugin expansion</b></td><td>The web backend now discovers dashboard plugins, mounts plugin APIs, serves plugin assets, and exposes plugin/provider management APIs for a richer product surface.</td></tr>
+</table>
+
+See [`docs/new-media-team-hermes.md`](docs/new-media-team-hermes.md) for the WSL2 Web baseline, upstream sync policy, and first workflow path.
+
+---
+
+**Under the hood, Hermes Claw inherits the self-improving AI agent built by [Nous Research](https://nousresearch.com).** Hermes creates skills from experience, improves them during use, persists knowledge, searches past conversations, and builds a deepening model of your work across sessions. Run it on a $5 VPS, a GPU cluster, or serverless infrastructure that costs nearly nothing when idle. It's not tied to your laptop — talk to it from Telegram while it works on a cloud VM.
 
 Use any model you want — [Nous Portal](https://portal.nousresearch.com), [OpenRouter](https://openrouter.ai) (200+ models), [NVIDIA NIM](https://build.nvidia.com) (Nemotron), [Xiaomi MiMo](https://platform.xiaomimimo.com), [z.ai/GLM](https://z.ai), [Kimi/Moonshot](https://platform.moonshot.ai), [MiniMax](https://www.minimax.io), [Hugging Face](https://huggingface.co), OpenAI, or your own endpoint. Switch with `hermes model` — no code changes, no lock-in.
 

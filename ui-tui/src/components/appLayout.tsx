@@ -8,7 +8,6 @@ import { $isBlocked, $overlayState, patchOverlayState } from '../app/overlayStor
 import { $uiState } from '../app/uiStore.js'
 import { INLINE_MODE, SHOW_FPS } from '../config/env.js'
 import { FULL_RENDER_TAIL_ITEMS } from '../config/limits.js'
-import { PLACEHOLDER } from '../content/placeholders.js'
 import {
   COMPOSER_PROMPT_GAP_WIDTH,
   composerPromptWidth,
@@ -173,7 +172,7 @@ const ComposerPane = memo(function ComposerPane({
   const promptText = sh ? '$' : ui.theme.brand.prompt
   const promptWidth = composerPromptWidth(promptText)
   const promptBlank = ' '.repeat(promptWidth)
-  const inputColumns = stableComposerColumns(composer.cols, promptWidth)
+  const inputColumns = stableComposerColumns(Math.max(8, composer.cols - 6), promptWidth)
   const inputHeight = inputVisualHeight(composer.input, inputColumns)
   const inputMouseRef = useRef<null | TextInputMouseApi>(null)
 
@@ -277,9 +276,12 @@ const ComposerPane = memo(function ComposerPane({
             ))}
 
             <Box
+              borderColor={isBlocked ? ui.theme.color.muted : ui.theme.color.border}
+              borderStyle="round"
               onMouseDown={captureInputDrag}
               onMouseDrag={dragFromPromptRow}
               onMouseUp={endInputDrag}
+              paddingX={1}
               position="relative"
               width={Math.max(1, composer.cols - 2)}
             >
@@ -301,7 +303,7 @@ const ComposerPane = memo(function ComposerPane({
                   onChange={composer.updateInput}
                   onPaste={composer.handleTextPaste}
                   onSubmit={composer.submit}
-                  placeholder={composer.empty ? PLACEHOLDER : ui.busy ? 'Ctrl+C to interrupt…' : ''}
+                  placeholder={composer.empty ? '输入任务，或用 /help 查看命令…' : ui.busy ? 'Ctrl+C to interrupt…' : ''}
                   value={composer.input}
                   voiceRecordKey={composer.voiceRecordKey}
                 />

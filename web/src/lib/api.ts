@@ -112,6 +112,45 @@ export const api = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ yaml_text }),
     }),
+  getDocuments: () => fetchJSON<DocumentsResponse>("/api/documents"),
+  createDocument: (body: { name: string; content: string }) =>
+    fetchJSON<DocumentInfo>("/api/documents", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    }),
+  uploadDocument: async (file: File) => {
+    const token = await getSessionToken();
+    const form = new FormData();
+    form.append("file", file);
+    return fetchJSON<DocumentInfo>("/api/documents/upload", {
+      method: "POST",
+      headers: { [SESSION_HEADER]: token },
+      body: form,
+    });
+  },
+  getDocument: (id: string) =>
+    fetchJSON<DocumentDetail>(
+      `/api/documents/${encodeURIComponent(id)}`,
+    ),
+  deleteDocument: (id: string) =>
+    fetchJSON<{ ok: boolean }>(
+      `/api/documents/${encodeURIComponent(id)}`,
+      { method: "DELETE" },
+    ),
+  getCoworkerPresets: () =>
+    fetchJSON<CoworkerPresetsResponse>("/api/plugins/new-media-coworkers/presets"),
+  getCoworkerStatus: () =>
+    fetchJSON<CoworkerStatusResponse>("/api/plugins/new-media-coworkers/status"),
+  createCoworkerProfile: (preset_id: string) =>
+    fetchJSON<{ ok: boolean; profile_name: string; chat_url: string }>(
+      "/api/plugins/new-media-coworkers/create",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ preset_id }),
+      },
+    ),
   getEnvVars: () => fetchJSON<Record<string, EnvVarInfo>>("/api/env"),
   setEnvVar: (key: string, value: string) =>
     fetchJSON<{ ok: boolean }>("/api/env", {
@@ -437,12 +476,54 @@ export interface SessionMessage {
 
 export interface SessionMessagesResponse {
   session_id: string;
+  profile_name?: string | null;
   messages: SessionMessage[];
 }
 
 export interface LogsResponse {
   file: string;
   lines: string[];
+}
+
+export interface DocumentInfo {
+  id: string;
+  name: string;
+  filename: string;
+  size: number;
+  updated_at: number;
+  preview: string;
+  source?: "library" | "local";
+  path?: string;
+}
+
+export interface DocumentDetail extends DocumentInfo {
+  content: string;
+}
+
+export interface DocumentsResponse {
+  documents: DocumentInfo[];
+}
+
+export interface CoworkerPreset {
+  id: string;
+  name: string;
+  role: string;
+  description: string;
+  profile_name: string;
+  starter_prompts?: string[];
+}
+
+export interface CoworkerStatus extends CoworkerPreset {
+  created: boolean;
+  chat_url: string;
+}
+
+export interface CoworkerPresetsResponse {
+  presets: CoworkerPreset[];
+}
+
+export interface CoworkerStatusResponse {
+  coworkers: CoworkerStatus[];
 }
 
 export interface AnalyticsDailyEntry {

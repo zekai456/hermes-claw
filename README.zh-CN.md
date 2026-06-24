@@ -2,17 +2,42 @@
   <img src="assets/banner.png" alt="Hermes Agent" width="100%">
 </p>
 
-# Hermes Agent ☤
+# Hermes Claw ☤
+
+> **Hermes Claw** 是基于 Hermes Agent 的新媒体团队 AI 工作台。
+> 它保留上游 Hermes Agent 的核心能力，同时加入现代浅色 Dashboard、
+> 浏览器版 WebChat、可复用 AI 同事、团队文档库，以及面向选题、脚本、
+> 多平台改写、发布检查、竞品观察和资料采集的新媒体工作流。
 
 <p align="center">
   <a href="https://hermes-agent.nousresearch.com/docs/"><img src="https://img.shields.io/badge/Docs-hermes--agent.nousresearch.com-FFD700?style=for-the-badge" alt="Documentation"></a>
   <a href="https://discord.gg/NousResearch"><img src="https://img.shields.io/badge/Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Discord"></a>
-  <a href="https://github.com/NousResearch/hermes-agent/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="License: MIT"></a>
+  <a href="https://github.com/zekai456/hermes-claw/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="License: MIT"></a>
   <a href="https://nousresearch.com"><img src="https://img.shields.io/badge/Built%20by-Nous%20Research-blueviolet?style=for-the-badge" alt="Built by Nous Research"></a>
   <a href="README.md"><img src="https://img.shields.io/badge/Lang-English-lightgrey?style=for-the-badge" alt="English"></a>
 </p>
 
-**由 [Nous Research](https://nousresearch.com) 构建的自进化 AI 代理。** 它是唯一内置学习闭环的智能代理——从经验中创建技能，在使用中改进技能，主动持久化知识，搜索过往对话，并在跨会话中逐步构建对你的深度理解。可以在 $5 的 VPS 上运行，也可以在 GPU 集群上运行，或者使用几乎零成本的 Serverless 基础设施。它不绑定你的笔记本——你可以在 Telegram 上与它对话，而它在云端 VM 上工作。
+**Hermes Claw 是面向内容团队和新媒体团队的 AI 运营工作台。**
+它把 Hermes Agent 的自进化代理核心，包装成更适合日常内容生产的产品层：
+AI 同事、WebChat、文档引用、Dashboard 插件，以及可以把资料和想法变成选题、
+脚本、文案、检查清单、报告和 PPT 大纲的工作流技能。
+
+## 这个 Fork 新增了什么
+
+<table>
+<tr><td><b>现代浅色 Dashboard 重构</b></td><td>默认 Dashboard 改为干净克制的浅色管理台风格，统一了卡片、输入框、侧边栏导航、弹窗、主题切换和语言切换；旧版 Hermes Teal 主题仍可选择。</td></tr>
+<tr><td><b>浏览器版 WebChat</b></td><td>新增 <code>/webchat</code>，面向新媒体生产的聊天工作区，支持持久会话、流式输出、工具活动、斜杠命令，以及 AI 同事快速切换。</td></tr>
+<tr><td><b>AI 同事 Profile</b></td><td><code>new-media-coworkers</code> Dashboard 插件内置运营经理、短视频编导、热点研究员、竞品观察员、品牌主编、视觉创意总监、PPT 制作人、网页采集研究员等预设，也支持自定义同事。</td></tr>
+<tr><td><b>团队文档库</b></td><td>新增 <code>/documents</code> 页面和受保护文档 API，支持保存、上传、搜索、查看、删除文档，并在 WebChat 中引用团队资料和本地生成报告。</td></tr>
+<tr><td><b>新媒体工作流技能</b></td><td>内置选题发现、短视频脚本、多平台改写、发布检查、效果复盘、网页资料采集和结构化证据包等技能。</td></tr>
+<tr><td><b>Dashboard 插件扩展</b></td><td>Web 后端支持发现 Dashboard 插件、挂载插件 API、服务插件静态资源，并提供插件/Provider 管理接口。</td></tr>
+</table>
+
+更多本 Fork 的定位、WSL2 Web 基线和工作流说明见 [`docs/new-media-team-hermes.md`](docs/new-media-team-hermes.md)。
+
+---
+
+**底层继承自 [Nous Research](https://nousresearch.com) 构建的自进化 AI 代理 Hermes Agent。** Hermes 可以从经验中创建技能，在使用中改进技能，主动持久化知识，搜索过往对话，并在跨会话中逐步理解你的工作方式。可以在 $5 的 VPS 上运行，也可以在 GPU 集群上运行，或者使用几乎零成本的 Serverless 基础设施。它不绑定你的笔记本——你可以在 Telegram 上与它对话，而它在云端 VM 上工作。
 
 支持任意模型——[Nous Portal](https://portal.nousresearch.com)、[OpenRouter](https://openrouter.ai)（200+ 模型）、[NVIDIA NIM](https://build.nvidia.com)（Nemotron）、[小米 MiMo](https://platform.xiaomimimo.com)、[z.ai/GLM](https://z.ai)、[Kimi/Moonshot](https://platform.moonshot.ai)、[MiniMax](https://www.minimax.io)、[Hugging Face](https://huggingface.co)、OpenAI，或自定义端点。使用 `hermes model` 即可切换——无需改代码，无锁定。
 

@@ -52,13 +52,13 @@ export function LanguageSwitcher() {
         aria-label={t.language.switchTo}
         aria-haspopup="listbox"
         aria-expanded={open}
-        className="px-2 py-1 normal-case tracking-normal font-normal text-xs text-muted-foreground hover:text-foreground"
+        className="rounded-lg px-2 py-1 normal-case tracking-normal font-normal text-xs text-muted-foreground hover:bg-accent hover:text-accent-foreground"
       >
         <span className="inline-flex items-center gap-1.5">
           <span className="text-base leading-none">{current.flag}</span>
           <Typography
             mondwest
-            className="hidden sm:inline tracking-wide uppercase text-[0.65rem]"
+            className="hidden sm:inline text-[0.75rem] normal-case tracking-normal"
           >
             {locale === "en" ? "EN" : current.name}
           </Typography>

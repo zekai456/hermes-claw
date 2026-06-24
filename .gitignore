@@ -17,6 +17,7 @@ __pycache__/model_tools.cpython-310.pyc
 __pycache__/web_tools.cpython-310.pyc
 logs/
 data/
+outputs/
 .pytest_cache/
 tmp/
 temp_vision_images/
@@ -59,6 +60,7 @@ hermes_cli/web_dist/
 # `npm run sync-assets` (see web/package.json).
 web/public/fonts/
 web/public/ds-assets/
+web/vite-*.log
 
 # Release script temp files
 .release_notes.md

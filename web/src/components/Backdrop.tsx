@@ -28,10 +28,12 @@ export function Backdrop() {
     <>
       <div
         aria-hidden
+        data-theme-light-canvas
         className="pointer-events-none fixed inset-0 z-[1]"
         style={{
           backgroundColor: "var(--background-base)",
-          mixBlendMode: "difference",
+          mixBlendMode:
+            "var(--component-backdrop-canvas-blend-mode, normal)" as React.CSSProperties["mixBlendMode"],
         }}
       />
 

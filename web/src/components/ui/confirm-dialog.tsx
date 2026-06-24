@@ -57,7 +57,7 @@ export function ConfirmDialog({
       }}
       className={cn(
         "fixed inset-0 z-50 flex items-center justify-center",
-        "bg-black/60 backdrop-blur-sm",
+        "bg-slate-950/35 backdrop-blur-sm",
         "animate-[fade-in_150ms_ease-out]",
       )}
     >
@@ -65,7 +65,7 @@ export function ConfirmDialog({
         ref={dialogRef}
         className={cn(
           "relative w-full max-w-md mx-4",
-          "border border-border bg-card shadow-lg",
+          "rounded-xl border border-border bg-card shadow-xl",
           "animate-[dialog-in_180ms_ease-out]",
         )}
       >
@@ -82,7 +82,7 @@ export function ConfirmDialog({
           <div className="flex-1 min-w-0 flex flex-col gap-1">
             <h2
               id="confirm-dialog-title"
-              className="font-expanded text-sm font-bold tracking-[0.08em] uppercase blend-lighter"
+              className="text-base font-semibold text-card-foreground"
             >
               {title}
             </h2>
@@ -90,7 +90,7 @@ export function ConfirmDialog({
             {description && (
               <p
                 id="confirm-dialog-desc"
-                className="font-mondwest text-xs text-muted-foreground leading-relaxed"
+                className="text-sm text-muted-foreground leading-relaxed"
               >
                 {description}
               </p>
